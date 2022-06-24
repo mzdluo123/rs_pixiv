@@ -43,7 +43,7 @@ async fn main() -> std::io::Result<()> {
 
     })
         .bind(("0.0.0.0", port))?
-        .bind(("::",port))?
+        // .bind(("::",port))?
         .run()
         .await
 }
