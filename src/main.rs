@@ -1,9 +1,10 @@
 mod tmplate;
 mod services;
+mod download;
+mod json_struct;
 
-
-use log::{debug, info, LevelFilter};
-use actix_web::{get, web, App, HttpServer, Responder};
+use log::{ info, LevelFilter};
+use actix_web::{ web, App, HttpServer, Responder};
 use std::env;
 
 #[tokio::main] // or #[tokio::main]
@@ -24,6 +25,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(actix_web::middleware::ErrorHandlers::default())
             .service(services::greet)
             .service(services::index)
+            .service(services::json_img)
+            .service(services::web_img)
 
     })
         .bind(("0.0.0.0", port))?
