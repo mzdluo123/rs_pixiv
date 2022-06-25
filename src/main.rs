@@ -4,12 +4,13 @@ mod download;
 mod json_struct;
 
 use log::{ info, LevelFilter};
-use actix_web::{ web, App, HttpServer, Responder};
-use std::env;
+use actix_web::{ web::{self, Bytes}, App, HttpServer, Responder};
+use std::{env, sync::Mutex};
 
 
-struct AppState {
-    client:awc::Client
+pub struct AppState {
+    client:awc::Client,
+    cache: Mutex<cached::TimedSizedCache<i32,Bytes>>
 }
 
 
@@ -30,7 +31,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
         .app_data(web::Data::new(
             AppState{
-               client: awc::Client::default()
+               client: awc::Client::default(),
+               cache: Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60))
             }
         ))
             .wrap(actix_web::middleware::Logger::default())
@@ -39,7 +41,6 @@ async fn main() -> std::io::Result<()> {
             .service(services::index)
             .service(services::json_img)
             .service(services::web_img)
-            .service(services::raw_img)
 
     })
         .bind(("0.0.0.0", port))?

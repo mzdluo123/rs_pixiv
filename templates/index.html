@@ -2,9 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>RainChan的图片代理服务</title>
 </head>
 <body>
-<p>欢迎使用图像代理服务</p>
+# RainChan的图片代理服务
+
+## 系统状态
+
+已缓存 {{ cache_count }} 张图片
+
+## 请求方式
+```
+ /json/图片id   # 可获取图片json详细信息
+```
+
+[测试](/json/99038048)
+
+
+```
+ /img/尺寸/图片id   # 可直接获取图片
+
+ 尺寸可选 ["mini","original","regular","small","thumb"]
+```
+
+![mini](/img/mini/99038048)
+
+![small](/img/small/99038048)
+
+![thumb](/img/thumb/99038048)
+
+![regular](/img/regular/99038048)
+
+![original](/img/original/99038048)
+
 </body>
 </html>
+
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://fastly.jsdelivr.net/gh/mzdluo123/blog_imgs/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
