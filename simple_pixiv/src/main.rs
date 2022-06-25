@@ -3,9 +3,11 @@ mod services;
 mod download;
 mod json_struct;
 
-use log::{ info};
+use log::{ info, error};
 use actix_web::{ web::{self, Bytes}, App, HttpServer};
+use core::time;
 use std::{env, sync::{Mutex, Arc}};
+use forceps::evictors::LruEvictor;
 
 
 pub struct AppState {
@@ -35,9 +37,9 @@ async fn main() -> std::io::Result<()> {
         }
     };
     let file_cache = Arc::new(forceps::CacheBuilder::new(file_cache_folder).track_access(true).build().await.unwrap());
+    tokio::spawn(evict_task(file_cache.clone()));
     info!("Run server on port {}",port);
     HttpServer::new(move || {
-     
         App::new()
         .app_data(web::Data::new(
             AppState{
@@ -62,3 +64,22 @@ async fn main() -> std::io::Result<()> {
         .await
 }
 
+
+async fn evict_task(file_cache: Arc<forceps::Cache>){
+    let max_cache_size: usize = match env::var("MAX_CACHE_SIZE") {
+        Ok(p) => {
+            p.parse().unwrap()
+        }
+        Err(_) => {
+            100*1024*1024 // 100MB
+        }
+    };
+
+    loop {
+        file_cache.evict_with(LruEvictor::new(max_cache_size.try_into().unwrap())).await.map_err(|e|{
+            error!("evict cache error {:?}",e);
+        }).ok();
+        info!("evict cache success");
+        tokio::time::sleep(time::Duration::from_secs(60*60)).await;
+    }
+}

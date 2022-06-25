@@ -87,8 +87,6 @@ pub async fn web_img(
                         .await.map_err(|e|{
                             error!("write cache error {:?}",e);
                         }).ok();
-                    
-
                     return HttpResponse::Ok()
                         .content_type(ContentType::jpeg())
                         .append_header((CACHE_CONTROL, "max-age=31536000"))
