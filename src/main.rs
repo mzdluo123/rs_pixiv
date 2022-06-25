@@ -17,7 +17,7 @@ pub struct AppState {
 
 #[tokio::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::builder().filter_level(LevelFilter::Info).try_init().unwrap();
+    env_logger::init();
     let port: u16 = match env::var("PORT") {
         Ok(p) => {
             p.parse().unwrap()
@@ -35,12 +35,13 @@ async fn main() -> std::io::Result<()> {
                cache: Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60))
             }
         ))
-            .wrap(actix_web::middleware::Logger::default())
+            .wrap(actix_web::middleware::Logger::default().log_target("http_log"))
             .wrap(actix_web::middleware::ErrorHandlers::default())
       
             .service(services::index)
             .service(services::json_img)
             .service(services::web_img)
+            
 
     })
         .bind(("0.0.0.0", port))?
