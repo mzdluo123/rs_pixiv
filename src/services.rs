@@ -2,15 +2,11 @@ use crate::AppState;
 use crate::download::{get_info, stream_file};
 use crate::json_struct::Root;
 use crate::tmplate::IndexTemp;
-use actix_web::dev::Payload;
-use actix_web::http;
 use actix_web::{get, http::header::{ContentType,LAST_MODIFIED}, web, App, HttpResponse, HttpRequest, Responder};
 use askama::Template;
 use awc::http::header::{REFERER, USER_AGENT};
-use awc::Client;
 use cached::Cached;
 use log::error;
-use serde::__private::de::Content;
 
 
 // static allowsType: [&str; 5] = ["mini","original","regular","small","thumb"];
