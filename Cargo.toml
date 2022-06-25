@@ -1,26 +1,5 @@
-[package]
-name = "simple_pixiv"
-version = "0.1.0"
-edition = "2021"
-
-[profile.release]
-strip = true 
-lto = true
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-actix-web = {version="4.1.0"}
-log = "0.4.17"
-env_logger = "0.9.0"
-tokio = { version = "1.19.2", features = ["full"] }
-askama = "0.11.1"
-awc = {version="3.0.0",features=["rustls"]}
-serde_json = "1.0.81"
-serde = "1.0.137"
-cached = "0.34.1"
-forceps = "0.3.2"
-# async-stream = "0.3.3"
-
-[build-dependencies]
-askama = "0.11.1"
+[workspace]
+members = [
+    "forceps",
+    "simple_pixiv"
+]
