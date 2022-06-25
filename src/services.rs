@@ -1,13 +1,17 @@
-use crate::AppState;
-use crate::download::{get_info, stream_file};
+use crate::download::{download_file, get_info};
 use crate::json_struct::Root;
 use crate::tmplate::IndexTemp;
-use actix_web::{get, http::header::{ContentType,LAST_MODIFIED}, web, App, HttpResponse, HttpRequest, Responder};
+use crate::AppState;
+use actix_web::http::header::CACHE_CONTROL;
+use actix_web::{
+    get,
+    http::header::{ContentType, LAST_MODIFIED},
+    web, App, HttpRequest, HttpResponse, Responder,
+};
 use askama::Template;
 use awc::http::header::{REFERER, USER_AGENT};
 use cached::Cached;
-use log::error;
-
+use log::{error, info, warn};
 
 // static allowsType: [&str; 5] = ["mini","original","regular","small","thumb"];
 
@@ -15,7 +19,7 @@ use log::error;
 pub async fn index(data: web::Data<AppState>) -> impl Responder {
     let cache = data.cache.lock().unwrap();
     let rsp = IndexTemp {
-        cache_count:cache.cache_size()
+        cache_count: cache.cache_size(),
     };
     return match rsp.render() {
         Ok(rsp) => HttpResponse::Ok()
@@ -26,58 +30,74 @@ pub async fn index(data: web::Data<AppState>) -> impl Responder {
 }
 
 #[get("/json/{id}")]
-pub async fn json_img(id: web::Path<i32>,data: web::Data<AppState>) -> impl Responder {
-            let content = get_info(id.into_inner(),&data).await;
-            match content {
-                Some(i) => {
-
-                    HttpResponse::Ok().content_type(ContentType::json()).body(i)
-                },
-                None => HttpResponse::NotFound().finish(),
-            }
+pub async fn json_img(id: web::Path<i32>, data: web::Data<AppState>) -> impl Responder {
+    let content = get_info(id.into_inner(), &data).await;
+    match content {
+        Some(i) => HttpResponse::Ok().content_type(ContentType::json()).body(i),
+        None => HttpResponse::NotFound().finish(),
     }
- 
-
+}
 
 #[get("/img/{img_type}/{id}")]
-pub async fn web_img(info: web::Path<(String,i32)>,data: web::Data<AppState>,req : HttpRequest) ->  impl Responder {
-    if  req.headers().contains_key("if-modified-since") {
-       return HttpResponse::NotModified().finish();
+pub async fn web_img(
+    info: web::Path<(String, i32)>,
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> impl Responder {
+    if req.headers().contains_key("if-modified-since") {
+        return HttpResponse::NotModified().finish();
     }
     // if !allowsType.contains(&img_type.as_str()){
     //     return HttpResponse::NotFound().finish();
     // }
+    let cache_key = format!("{},{}", info.0, info.1);
+    let file_cache = data.file_cache.as_ref();
+    match file_cache.read(&cache_key).await {
+        Ok(i) => {
+            return HttpResponse::Ok()
+                .content_type(ContentType::jpeg())
+                .append_header((CACHE_CONTROL, "max-age=31536000"))
+                .append_header((LAST_MODIFIED, "1"))
+                .body(i);
+        }
+        Err(e) => {
+            warn!("disk cache miss on {}  {:?}",cache_key,e)
+        }
+    }
 
-    let content = get_info(info.1,&data).await;
+    let content = get_info(info.1, &data).await;
     match content {
         Some(i) => {
             let obj: Root = serde_json::from_str(&String::from_utf8(i.to_vec()).unwrap()).unwrap();
             let url = match info.0.as_str() {
-                "mini" => {
-                    obj.body.urls.mini
-                }
-                "original" =>{
-                    obj.body.urls.original
-                }
-                "regular"=>{
-                    obj.body.urls.regular
-                }
-                "small" =>{
-                    obj.body.urls.small
-                }
-                "thumb" =>{
-                    obj.body.urls.thumb
-                }
-                _=>{
-                    error!("img_type error {}",info.0);
-                    return  HttpResponse::NotFound().finish();
+                "mini" => obj.body.urls.mini,
+                "original" => obj.body.urls.original,
+                "regular" => obj.body.urls.regular,
+                "small" => obj.body.urls.small,
+                "thumb" => obj.body.urls.thumb,
+                _ => {
+                    error!("img_type error {}", info.0);
+                    return HttpResponse::NotFound().finish();
                 }
             };
-            stream_file(&url,&data.client).await
-        }
-     None=>{
-            HttpResponse::NotFound().finish()
-        }
-     }  
- }
+            match download_file(&url, &data.client).await {
+                Some(i) => {
+                    file_cache
+                        .write(&cache_key, &i)
+                        .await.map_err(|e|{
+                            error!("write cache error {:?}",e);
+                        }).ok();
+                    
 
+                    return HttpResponse::Ok()
+                        .content_type(ContentType::jpeg())
+                        .append_header((CACHE_CONTROL, "max-age=31536000"))
+                        .append_header((LAST_MODIFIED, "1"))
+                        .body(i);
+                }
+                None => HttpResponse::NotFound().finish(),
+            }
+        }
+        None => HttpResponse::NotFound().finish(),
+    }
+}
