@@ -9,7 +9,7 @@ use log::{ info, error};
 use actix_web::{ web::{self, Bytes}, App, HttpServer};
 use once_cell::sync::OnceCell;
 use core::time;
-use std::{env, sync::{Mutex, Arc}, time::Duration};
+use std::{env, sync::{Mutex, Arc}, time::Duration, fs, path::Path};
 
 
 pub struct AppState {
@@ -40,6 +40,14 @@ async fn main() -> std::io::Result<()> {
     };
 
     info!("Run server on port {}",port);
+    
+
+    if !Path::new(&file_cache_folder).exists() {
+
+        tokio::fs::create_dir_all(&file_cache_folder).await.unwrap();
+    }
+
+
     tokio::spawn(fs_cache::clean_task(file_cache_folder.clone()));
 
     HttpServer::new(move || {

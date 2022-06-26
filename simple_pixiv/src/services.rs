@@ -50,7 +50,7 @@ pub async fn web_img(
     // if !allowsType.contains(&img_type.as_str()){
     //     return HttpResponse::NotFound().finish();
     // }
-    let cache_key = format!("{},{}", info.0, info.1);
+    let cache_key = format!("{}{}", info.0, info.1);
     let ref fs_cache = data.fs_cache;
     match fs_cache.read(&cache_key).await {
         Some(i) => {

@@ -1,5 +1,6 @@
 use actix_web::web::Bytes;
 use cached::async_sync::Mutex;
+use filetime::FileTime;
 use core::time;
 use env_logger::fmt::Timestamp;
 use futures::{Stream, StreamExt};
@@ -62,11 +63,11 @@ pub enum FsCacheError {
 }
 
 impl FsCache {
-     pub fn new(cache_folder:&str) -> FsCache {
+    pub fn new(cache_folder: &str) -> FsCache {
         return FsCache {
             // metadata: RwLock::new(BinaryHeap::new()),
             // index:RwLock::new(HashMap::new()),
-            cache_folder: cache_folder.to_string()
+            cache_folder: cache_folder.to_string(),
         };
     }
 
@@ -122,7 +123,7 @@ impl FsCache {
     // }
 
     pub async fn read(self: &Self, key: &str) -> Option<Bytes> {
-        let path = format!("{},{}", self.cache_folder, key);
+        let path = format!("{}/{}", self.cache_folder, key);
         let content = tokio::fs::read(&path).await;
         match content {
             Ok(v) => {
@@ -153,7 +154,7 @@ impl FsCache {
     {
         // let read_able_index = self.index
         // .read().;
-        let path = format!("{},{}", self.cache_folder, key);
+        let path = format!("{}/{}", self.cache_folder, key);
 
         let mut file = tokio::fs::OpenOptions::new()
             .write(true)
@@ -178,24 +179,23 @@ impl FsCache {
         Ok(())
         // Some(self.write_meta(key,&path));
     }
-
-   
 }
-
-
 
 pub async fn clean(folder: &str) -> Result<(), FsCacheError> {
     let mut dir = tokio::fs::read_dir(folder)
         .await
         .map_err(|e| FsCacheError::CleanError)?;
-    let now = SystemTime::now().elapsed().unwrap();
+    let now = FileTime::from_system_time(SystemTime::now());
     while let Ok(Some(d)) = dir.next_entry().await {
         let meta = d.metadata().await;
         match meta {
             Ok(m) => {
-                if m.last_access_time() - now.as_secs() >= 1000 * 60 * 60 {
+                let f_time = FileTime::from_last_access_time(&m);
+                if  now.seconds() - f_time.seconds() >=  60 * 60 {
                     //一小时
-                    tokio::fs::remove_file(d.path()).await;
+                    tokio::fs::remove_file(d.path()).await.map_err(|e|{
+                        error!("can't remove cache file {:?} {e}",d.path());
+                    }).unwrap();
                 }
             }
             Err(e) => {
@@ -208,7 +208,6 @@ pub async fn clean(folder: &str) -> Result<(), FsCacheError> {
 }
 
 pub async fn clean_task(cache: String) {
-    
     loop {
         info!("run clean");
         clean(&cache).await;
