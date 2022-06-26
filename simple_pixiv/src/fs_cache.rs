@@ -185,7 +185,7 @@ pub async fn clean(folder: &str) -> Result<(), FsCacheError> {
                     //一小时
                     tokio::fs::remove_file(d.path()).await.map_err(|e|{
                         error!("can't remove cache file {:?} {e}",d.path());
-                    }).unwrap();
+                    }).ok();
                 }
             }
             Err(e) => {
@@ -200,7 +200,7 @@ pub async fn clean(folder: &str) -> Result<(), FsCacheError> {
 pub async fn clean_task(cache: String) {
     loop {
         info!("run clean");
-        clean(&cache).await;
+        clean(&cache).await.ok();
         tokio::time::sleep(Duration::from_secs(60 * 60)).await;
     }
 }
