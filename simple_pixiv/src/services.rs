@@ -1,7 +1,7 @@
 use crate::download::{download_file, get_info};
 use crate::json_struct::Root;
 use crate::tmplate::IndexTemp;
-use crate::AppState;
+use crate::{AppState, fs_cache};
 use actix_web::http::header::CACHE_CONTROL;
 use actix_web::{
     get,
@@ -51,17 +51,17 @@ pub async fn web_img(
     //     return HttpResponse::NotFound().finish();
     // }
     let cache_key = format!("{},{}", info.0, info.1);
-    let file_cache = data.file_cache.as_ref();
-    match file_cache.read(&cache_key).await {
-        Ok(i) => {
+    let ref fs_cache = data.fs_cache;
+    match fs_cache.read(&cache_key).await {
+        Some(i) => {
             return HttpResponse::Ok()
                 .content_type(ContentType::jpeg())
                 .append_header((CACHE_CONTROL, "max-age=31536000"))
                 .append_header((LAST_MODIFIED, "1"))
                 .body(i);
         }
-        Err(e) => {
-            warn!("disk cache miss on {}  {:?}",cache_key,e)
+        None => {
+            warn!("disk cache miss on {}",cache_key)
         }
     }
 
@@ -81,17 +81,16 @@ pub async fn web_img(
                 }
             };
             match download_file(&url, &data.client).await {
-                Some(i) => {
-                    file_cache
-                        .write(&cache_key, &i)
-                        .await.map_err(|e|{
-                            error!("write cache error {:?}",e);
-                        }).ok();
+                Some( mut i) => {
+                    fs_cache.write_cache(&cache_key, &mut i).await.unwrap();
+
+                    let content = fs_cache.read(&cache_key).await.unwrap();
+                      
                     return HttpResponse::Ok()
                         .content_type(ContentType::jpeg())
                         .append_header((CACHE_CONTROL, "max-age=31536000"))
                         .append_header((LAST_MODIFIED, "1"))
-                        .body(i);
+                        .body(content);
                 }
                 None => HttpResponse::NotFound().finish(),
             }

@@ -1,7 +1,8 @@
-use actix_web::{http::{header::{REFERER, ContentType, USER_AGENT,CACHE_CONTROL,LAST_MODIFIED}, Error}, HttpResponse, web::{Bytes, self}, HttpMessage};
-use awc::{Client};
+use actix_web::{http::{header::{REFERER, ContentType, USER_AGENT,CACHE_CONTROL,LAST_MODIFIED}, Error}, HttpResponse, web::{Bytes, self}, HttpMessage, error::PayloadError};
+use awc::{Client, ClientResponse};
 use cached::Cached;
 
+use ::futures::Stream;
 use log::{error, info, warn};
 use tokio::sync::futures;
 use crate::AppState;
@@ -38,12 +39,14 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
   
 }
 
-pub async fn download_file(url:&str,client: &Client)->Option<Bytes>{
+
+pub async fn download_file(url:&str,client: &Client)->Option<impl Stream<Item = Result<actix_web::web::Bytes, PayloadError>>>{
+    
         info!("download from {}",url);
         let rsp = client.get(url).append_header((REFERER, "https://www.pixiv.net")) .send().await;
         match rsp {
-            Ok(mut i)=>{
-                 Some(i.body().limit(10*1024*1024).await.ok()?)
+            Ok(i)=>{
+                 Some(i)
             }
             Err(e) =>{
                 warn!("download errpr on {} {:?}",url,&e);

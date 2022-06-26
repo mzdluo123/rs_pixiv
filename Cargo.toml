@@ -1,5 +1,4 @@
 [workspace]
 members = [
-    "forceps",
     "simple_pixiv"
 ]

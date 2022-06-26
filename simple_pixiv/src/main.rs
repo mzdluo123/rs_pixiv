@@ -2,18 +2,20 @@ mod tmplate;
 mod services;
 mod download;
 mod json_struct;
+mod fs_cache;
 
+use fs_cache::FsCache;
 use log::{ info, error};
 use actix_web::{ web::{self, Bytes}, App, HttpServer};
+use once_cell::sync::OnceCell;
 use core::time;
-use std::{env, sync::{Mutex, Arc}};
-use forceps::evictors::LruEvictor;
+use std::{env, sync::{Mutex, Arc}, time::Duration};
 
 
 pub struct AppState {
     client:awc::Client,
     cache: Mutex<cached::TimedSizedCache<i32,Bytes>>,
-    file_cache: Arc<forceps::Cache>
+    fs_cache: FsCache
 }
 
 
@@ -36,16 +38,17 @@ async fn main() -> std::io::Result<()> {
             "./cache".to_string()
         }
     };
-    let file_cache = Arc::new(forceps::CacheBuilder::new(file_cache_folder).track_access(true).build().await.unwrap());
-    tokio::spawn(evict_task(file_cache.clone()));
+
     info!("Run server on port {}",port);
+    tokio::spawn(fs_cache::clean_task(file_cache_folder.clone()));
+
     HttpServer::new(move || {
         App::new()
         .app_data(web::Data::new(
             AppState{
                client: awc::Client::default(),
                cache: Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60)),
-               file_cache:file_cache.clone()
+                fs_cache :  FsCache::new(&file_cache_folder)
             }
         ))
             .wrap(actix_web::middleware::Logger::default().log_target("http_log"))
@@ -65,21 +68,24 @@ async fn main() -> std::io::Result<()> {
 }
 
 
-async fn evict_task(file_cache: Arc<forceps::Cache>){
-    let max_cache_size: usize = match env::var("MAX_CACHE_SIZE") {
-        Ok(p) => {
-            p.parse().unwrap()
-        }
-        Err(_) => {
-            100*1024*1024 // 100MB
-        }
-    };
 
-    loop {
-        file_cache.evict_with(LruEvictor::new(max_cache_size.try_into().unwrap())).await.map_err(|e|{
-            error!("evict cache error {:?}",e);
-        }).ok();
-        info!("evict cache success");
-        tokio::time::sleep(time::Duration::from_secs(60*60)).await;
-    }
-}
+
+
+// async fn evict_task(file_cache: Arc<forceps::Cache>){
+//     let max_cache_size: usize = match env::var("MAX_CACHE_SIZE") {
+//         Ok(p) => {
+//             p.parse().unwrap()
+//         }
+//         Err(_) => {
+//             100*1024*1024 // 100MB
+//         }
+//     };
+
+//     loop {
+//         file_cache.evict_with(LruEvictor::new(max_cache_size.try_into().unwrap())).await.map_err(|e|{
+//             error!("evict cache error {:?}",e);
+//         }).ok();
+//         info!("evict cache success");
+//         tokio::time::sleep(time::Duration::from_secs(60*60)).await;
+//     }
+// }
