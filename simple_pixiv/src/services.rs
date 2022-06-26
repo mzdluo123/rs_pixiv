@@ -1,5 +1,5 @@
 use crate::download::{download_file, get_info};
-use crate::json_struct::Root;
+use crate::ill_struct::Root;
 use crate::tmplate::IndexTemp;
 use crate::{AppState, fs_cache};
 use actix_web::http::header::CACHE_CONTROL;
