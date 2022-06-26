@@ -21,7 +21,6 @@ jobs:
       run: |
         rustup target add x86_64-unknown-linux-musl
         apt update && apt install -y musl-tools musl-dev
-        update-ca-certificates
     - name: Build
       run: |
         cargo build --release --target x86_64-unknown-linux-musl
