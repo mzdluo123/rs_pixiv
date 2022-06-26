@@ -20,7 +20,7 @@ jobs:
     - name: install musl
       run: |
         rustup target add x86_64-unknown-linux-musl
-        sudo apt update && apt install -y musl-tools musl-dev
+        sudo apt update && sudo apt install -y musl-tools musl-dev
         sudo update-ca-certificates
     - name: Build
       run: |
