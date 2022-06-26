@@ -1,23 +1,14 @@
 use actix_web::web::Bytes;
-use cached::async_sync::Mutex;
+
 use filetime::FileTime;
-use core::time;
-use env_logger::fmt::Timestamp;
+
 use futures::{Stream, StreamExt};
 use log::{error, info, warn};
-use once_cell::sync::OnceCell;
-use std::collections::BinaryHeap;
+
 use std::{
-    cmp::Ordering,
-    collections::HashMap,
-    f32::DIGITS,
+
     fmt::Display,
-    fs,
-    hash::Hash,
-    os::windows::prelude::MetadataExt,
-    rc::Rc,
-    sync::{Arc, RwLock},
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, SystemTime},
 };
 use tokio::io::AsyncWriteExt;
 
@@ -57,7 +48,6 @@ pub struct FsCache {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum FsCacheError {
-    InsertMataError,
     WriteFileError,
     CleanError,
 }
