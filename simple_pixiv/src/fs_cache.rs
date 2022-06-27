@@ -1,8 +1,9 @@
-use actix_web::web::Bytes;
+use actix_files::NamedFile;
+use actix_web::{web::Bytes, HttpResponse, body::BoxBody, HttpRequest, http::header::ContentType};
 
 use filetime::FileTime;
 
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt, TryFutureExt};
 use log::{error, info, warn};
 
 use std::{
@@ -113,7 +114,7 @@ impl FsCache {
     // }
 
     pub async fn read(self: &Self, key: &str) -> Option<Bytes> {
-        let path = format!("{}/{}", self.cache_folder, key);
+        let path = format!("{}/{}.jpg", self.cache_folder, key);
         let content = tokio::fs::read(&path).await;
         match content {
             Ok(v) => {
@@ -133,6 +134,18 @@ impl FsCache {
         // }
     }
 
+    pub async fn read_stream(self:&Self ,req:&HttpRequest, key: &str)->Option<HttpResponse<BoxBody>>{
+        let path = format!("{}/{}.jpg", self.cache_folder, key);
+        match NamedFile::open_async(path).await {
+            Ok(_f) =>{
+                return Some(_f.into_response(req));
+            }
+            Err(_) => {
+                None
+            },
+        }
+    }
+
     pub async fn write_cache<T, E>(
         self: &Self,
         key: &str,
@@ -144,7 +157,7 @@ impl FsCache {
     {
         // let read_able_index = self.index
         // .read().;
-        let path = format!("{}/{}", self.cache_folder, key);
+        let path = format!("{}/{}.jpg", self.cache_folder, key);
 
         let mut file = tokio::fs::OpenOptions::new()
             .write(true)
@@ -188,7 +201,8 @@ pub async fn clean(folder: &str) -> Result<(), FsCacheError> {
                     }).ok();
                 }
             }
-            Err(e) => {
+            Err(_e) => {
+                error!("read metadata error {:?} {}",d.path(),_e);
                 return Ok(());
             }
         }

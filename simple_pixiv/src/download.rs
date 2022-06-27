@@ -17,8 +17,8 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
         },
         None => {
             drop(cache);
-            warn!("ram cache miss on {}",id);
-            let  rsp =  data.client.get(format!("https://www.pixiv.net/ajax/illust/{}", id))
+            warn!("ram cache miss on {}",&id);
+            let  rsp =  data.client.get(format!("https://www.pixiv.net/ajax/illust/{}", &id))
             .append_header((USER_AGENT, "PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
             .append_header((REFERER, "https://www.pixiv.net"))
             .send().await;
@@ -30,7 +30,7 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
                 return Some(img_contant)
             }
             Err(e) =>{
-                 error!("{:?}",&e);
+                 error!("{:?} when download {}",&e,&id);
                  return None
             }
         };

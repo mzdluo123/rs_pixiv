@@ -2,6 +2,7 @@ use crate::download::{download_file, get_info};
 use crate::ill_struct::Root;
 use crate::tmplate::IndexTemp;
 use crate::{AppState, fs_cache};
+use actix_web::http;
 use actix_web::http::header::CACHE_CONTROL;
 use actix_web::{
     get,
@@ -18,8 +19,10 @@ use log::{error, info, warn};
 #[get("/")]
 pub async fn index(data: web::Data<AppState>) -> impl Responder {
     let cache = data.cache.lock().unwrap();
+
     let rsp = IndexTemp {
-        cache_count: cache.cache_size(),
+        meta_cache: cache.cache_size(),
+        bookmark: data.random_image.read().unwrap().id_set.len()
     };
     return match rsp.render() {
         Ok(rsp) => HttpResponse::Ok()
@@ -84,17 +87,40 @@ pub async fn web_img(
                 Some( mut i) => {
                     fs_cache.write_cache(&cache_key, &mut i).await.unwrap();
 
-                    let content = fs_cache.read(&cache_key).await.unwrap();
+                    let rsp = fs_cache.read_stream(&req, &cache_key).await;
+                    match rsp {
+                        Some(_i)=>{
+                            return _i;
+                        }
+                        None=>{
+                            HttpResponse::NotFound().finish()
+                        }
+                    }
+
+                    // let content = fs_cache.read(&cache_key).await.unwrap();
                       
-                    return HttpResponse::Ok()
-                        .content_type(ContentType::jpeg())
-                        .append_header((CACHE_CONTROL, "max-age=31536000"))
-                        .append_header((LAST_MODIFIED, "1"))
-                        .body(content);
+                    // return HttpResponse::Ok()
+                    //     .content_type(ContentType::jpeg())
+                    //     .append_header((CACHE_CONTROL, "max-age=31536000"))
+                    //     .append_header((LAST_MODIFIED, "1"))
+                    //     .body(content);
                 }
                 None => HttpResponse::NotFound().finish(),
             }
         }
         None => HttpResponse::NotFound().finish(),
     }
+}
+
+
+#[get("/random")]
+pub async fn random(data: web::Data<AppState>) -> impl Responder {
+    if let Ok(random) = data.random_image.read(){
+        if let Some(id) = random.random_img(){
+            return HttpResponse::TemporaryRedirect().append_header((http::header::LOCATION, format!("/img/regular/{id}"))).finish(); 
+        }
+        return HttpResponse::NotFound().finish(); 
+  
+    }
+    return HttpResponse::NotFound().finish(); 
 }
