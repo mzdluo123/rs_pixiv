@@ -99,6 +99,7 @@ async fn main() -> std::io::Result<()> {
             .service(services::json_img)
             .service(services::web_img)
             .service(services::random)
+            .service(services::pximg_proxy)
             
 
     })

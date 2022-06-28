@@ -1,4 +1,4 @@
-use actix_web::{http::{header::{REFERER, ContentType, USER_AGENT,CACHE_CONTROL,LAST_MODIFIED}, Error}, HttpResponse, web::{Bytes, self}, HttpMessage, error::PayloadError};
+use actix_web::{http::{header::{REFERER, ContentType, USER_AGENT,CACHE_CONTROL,LAST_MODIFIED}, Error}, HttpResponse, web::{Bytes, self}, HttpMessage, error::PayloadError, dev::Payload};
 use awc::{Client, ClientResponse};
 use cached::Cached;
 
@@ -49,7 +49,7 @@ pub async fn download_file(url:&str,client: &Client)->Option<impl Stream<Item = 
                  Some(i)
             }
             Err(e) =>{
-                warn!("download errpr on {} {:?}",url,&e);
+                warn!("download error on {} {:?}",url,&e);
                None
             }
         }

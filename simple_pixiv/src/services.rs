@@ -1,16 +1,16 @@
 use crate::download::{download_file, get_info};
 use crate::ill_struct::Root;
 use crate::tmplate::IndexTemp;
-use crate::{AppState, fs_cache};
+use crate::{fs_cache, AppState};
 use actix_web::http;
 use actix_web::http::header::CACHE_CONTROL;
 use actix_web::{
     get,
-    http::header::{ContentType, LAST_MODIFIED},
+    http::header::{ContentType, LAST_MODIFIED,USER_AGENT,COOKIE,REFERER},
     web, App, HttpRequest, HttpResponse, Responder,
 };
 use askama::Template;
-use awc::http::header::{REFERER, USER_AGENT};
+use askama::filters::format;
 use cached::Cached;
 use log::{error, info, warn};
 
@@ -22,7 +22,7 @@ pub async fn index(data: web::Data<AppState>) -> impl Responder {
 
     let rsp = IndexTemp {
         meta_cache: cache.cache_size(),
-        bookmark: data.random_image.read().unwrap().id_set.len()
+        bookmark: data.random_image.read().unwrap().id_set.len(),
     };
     return match rsp.render() {
         Ok(rsp) => HttpResponse::Ok()
@@ -64,7 +64,7 @@ pub async fn web_img(
                 .body(i);
         }
         None => {
-            warn!("disk cache miss on {}",cache_key)
+            warn!("disk cache miss on {}", cache_key)
         }
     }
 
@@ -84,26 +84,16 @@ pub async fn web_img(
                 }
             };
             match download_file(&url, &data.client).await {
-                Some( mut i) => {
+                Some(mut i) => {
                     fs_cache.write_cache(&cache_key, &mut i).await.unwrap();
 
                     let rsp = fs_cache.read_stream(&req, &cache_key).await;
                     match rsp {
-                        Some(_i)=>{
+                        Some(_i) => {
                             return _i;
                         }
-                        None=>{
-                            HttpResponse::NotFound().finish()
-                        }
+                        None => HttpResponse::NotFound().finish(),
                     }
-
-                    // let content = fs_cache.read(&cache_key).await.unwrap();
-                      
-                    // return HttpResponse::Ok()
-                    //     .content_type(ContentType::jpeg())
-                    //     .append_header((CACHE_CONTROL, "max-age=31536000"))
-                    //     .append_header((LAST_MODIFIED, "1"))
-                    //     .body(content);
                 }
                 None => HttpResponse::NotFound().finish(),
             }
@@ -112,15 +102,47 @@ pub async fn web_img(
     }
 }
 
-
 #[get("/random")]
 pub async fn random(data: web::Data<AppState>) -> impl Responder {
-    if let Ok(random) = data.random_image.read(){
-        if let Some(id) = random.random_img(){
-            return HttpResponse::TemporaryRedirect().append_header((http::header::LOCATION, format!("/img/regular/{id}"))).finish(); 
+    if let Ok(random) = data.random_image.read() {
+        if let Some(id) = random.random_img() {
+            return HttpResponse::TemporaryRedirect()
+                .append_header((http::header::LOCATION, format!("/img/small/{id}")))
+                .finish();
         }
-        return HttpResponse::NotFound().finish(); 
-  
+        return HttpResponse::NotFound().finish();
     }
-    return HttpResponse::NotFound().finish(); 
+    return HttpResponse::NotFound().finish();
+}
+
+#[get("/{path:(img-(master|original)|c).*}")]
+pub async fn pximg_proxy(
+    parm: web::Path<String>,
+    data: web::Data<AppState>,
+    req: HttpRequest,
+) -> impl Responder {
+    let url = format!("https://i.pximg.net/{}",parm.as_ref());
+    let client = &data.client;
+    let mut req_builder = client.get(&url)
+    .append_header((REFERER, "https://www.pixiv.net"));
+
+    if let Some(ua) =  req.headers().get(USER_AGENT){
+        req_builder = req_builder.append_header((USER_AGENT,ua));
+    }
+    
+    if let Some(cookie) =  req.headers().get(COOKIE){
+        req_builder = req_builder.append_header((COOKIE,cookie));
+    }
+
+    match req_builder.send().await {
+        Ok(i)=>{
+            return HttpResponse::Ok().content_type(ContentType::jpeg()).streaming(i);
+        }
+        Err(e) =>{
+            warn!("download error on {} {:?}",&url,&e);
+            return HttpResponse::NotFound().finish();
+        }
+    }
+   
+
 }

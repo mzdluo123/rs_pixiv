@@ -2,3 +2,8 @@
 members = [
     "simple_pixiv"
 ]
+
+[profile.release]
+strip = true 
+lto = true
+codegen-units = 1
