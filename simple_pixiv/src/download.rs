@@ -5,7 +5,7 @@ use cached::Cached;
 use ::futures::Stream;
 use log::{error, info, warn};
 
-use crate::AppState;
+use crate::{AppState, retry};
 
 
 
@@ -18,10 +18,12 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
         None => {
             drop(cache);
             warn!("ram cache miss on {}",&id);
-            let  rsp =  data.client.get(format!("https://www.pixiv.net/ajax/illust/{}", &id))
-            .append_header((USER_AGENT, "PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
-            .append_header((REFERER, "https://www.pixiv.net"))
-            .send().await;
+            let req_builder = ||{
+                data.client.get(format!("https://www.pixiv.net/ajax/illust/{}", &id))
+                    .append_header((USER_AGENT, "PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
+                    .append_header((REFERER, "https://www.pixiv.net"))
+            };
+            let rsp = retry!(req_builder,3);
         return match rsp {
             Ok(mut i) => {
                 let img_contant = i.body().await.ok()?;
@@ -43,11 +45,12 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
 pub async fn download_file(url:&str,client: &Client)->Option<impl Stream<Item = Result<actix_web::web::Bytes, PayloadError>>>{
     
         info!("download from {}",url);
-        let rsp = client.get(url)
-        .append_header((REFERER, "https://www.pixiv.net")) 
-        .append_header((USER_AGENT,"PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
-        .send().await;
-        match rsp {
+        let req_builder = ||{
+            client.get(url)
+                .append_header((REFERER, "https://www.pixiv.net"))
+                .append_header((USER_AGENT,"PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
+        };
+        match retry!(req_builder,3) {
             Ok(i)=>{
                  Some(i)
             }

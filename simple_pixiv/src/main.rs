@@ -5,6 +5,7 @@ mod ill_struct;
 mod fs_cache;
 mod bookmark_struct;
 mod random_img;
+mod retry;
 
 use fs_cache::FsCache;
 use log::{ info, warn};

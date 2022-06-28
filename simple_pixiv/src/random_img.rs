@@ -24,10 +24,11 @@ impl ImgIdStorage {
 
     pub fn random_img(&self) -> Option<String> {
         let readable = &self.id_set;
+        if readable.is_empty() {
+            return None;
+        }
         let mut rand = rand::thread_rng();
-
         let id_list: Vec<String> = readable.clone().into_iter().collect();
-
         let index = rand.gen_range(0..id_list.len() - 1);
         return id_list.get(index).cloned();
     }
@@ -74,10 +75,10 @@ pub async fn init_id_set(storage: &Arc<RwLock<ImgIdStorage>>, user_id: &str, coo
                     return;
                 }
                 if data_obj.body.works.is_empty() {
-                    if let Some(readadbe) = &storage.read().ok() {
+                    if let Some(readable) = &storage.read().ok() {
                         info!(
                             "download bookmark finish, img count: {}",
-                            &readadbe.id_set.len()
+                            &readable.id_set.len()
                         );
                     }
 

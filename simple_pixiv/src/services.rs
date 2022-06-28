@@ -2,7 +2,7 @@
 use crate::download::{download_file, get_info};
 use crate::ill_struct::Root;
 use crate::tmplate::IndexTemp;
-use crate::{AppState};
+use crate::{AppState, retry};
 use actix_web::body::SizedStream;
 
 use actix_web::http;
@@ -14,9 +14,7 @@ use actix_web::{
     web, HttpRequest, HttpResponse, Responder,
 };
 use askama::Template;
-
 use cached::Cached;
-
 use log::{error, warn};
 
 // static allowsType: [&str; 5] = ["mini","original","regular","small","thumb"];
@@ -128,19 +126,24 @@ pub async fn pximg_proxy(
     req: HttpRequest,
 ) -> impl Responder {
     let url = format!("https://i.pximg.net/{}",parm.as_ref());
-    let client = &data.client;
-    let mut req_builder = client.get(&url)
-    .append_header((REFERER, "https://www.pixiv.net"));
 
-    if let Some(ua) =  req.headers().get(USER_AGENT){
-        req_builder = req_builder.append_header((USER_AGENT,ua));
-    }
-    
-    if let Some(cookie) =  req.headers().get(COOKIE){
-        req_builder = req_builder.append_header((COOKIE,cookie));
-    }
+    let req_factory = ||{
+        let client = &data.client;
+        let mut req_builder = client.get(&url)
+            .append_header((REFERER, "https://www.pixiv.net"));
 
-    return match req_builder.send().await {
+        if let Some(ua) =  req.headers().get(USER_AGENT){
+            req_builder = req_builder.append_header((USER_AGENT,ua));
+        }
+
+        if let Some(cookie) =  req.headers().get(COOKIE){
+            req_builder = req_builder.append_header((COOKIE,cookie));
+        }
+        req_builder
+    };
+
+    let res = retry!(req_factory,3);
+    return match res {
         Ok(i) => {
             let mut b = HttpResponse::Ok();
             b.content_type(ContentType::jpeg());
