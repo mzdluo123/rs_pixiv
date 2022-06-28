@@ -3,6 +3,7 @@ use awc::{Client};
 use cached::Cached;
 
 use ::futures::Stream;
+
 use log::{error, info, warn};
 
 use crate::{AppState, retry};
@@ -35,7 +36,7 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
                 error!("{:?} when download {}",&e,&id);
                 None
             }
-        };
+            };
         },
     }
   
