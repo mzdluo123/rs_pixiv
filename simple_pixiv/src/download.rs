@@ -43,7 +43,10 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
 pub async fn download_file(url:&str,client: &Client)->Option<impl Stream<Item = Result<actix_web::web::Bytes, PayloadError>>>{
     
         info!("download from {}",url);
-        let rsp = client.get(url).append_header((REFERER, "https://www.pixiv.net")) .send().await;
+        let rsp = client.get(url)
+        .append_header((REFERER, "https://www.pixiv.net")) 
+        .append_header((USER_AGENT,"PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
+        .send().await;
         match rsp {
             Ok(i)=>{
                  Some(i)
