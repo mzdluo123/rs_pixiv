@@ -22,14 +22,14 @@ impl ImgIdStorage {
         }
     }
 
-    pub fn random_img(self: &Self) -> Option<String> {
+    pub fn random_img(&self) -> Option<String> {
         let readable = &self.id_set;
         let mut rand = rand::thread_rng();
 
         let id_list: Vec<String> = readable.clone().into_iter().collect();
 
         let index = rand.gen_range(0..id_list.len() - 1);
-        return id_list.get(index).map(|x| x.clone());
+        return id_list.get(index).cloned();
     }
 }
 
@@ -73,7 +73,7 @@ pub async fn init_id_set(storage: &Arc<RwLock<ImgIdStorage>>, user_id: &str, coo
                     error!("response error {}", data_obj.message);
                     return;
                 }
-                if data_obj.body.works.len() == 0 {
+                if data_obj.body.works.is_empty() {
                     if let Some(readadbe) = &storage.read().ok() {
                         info!(
                             "download bookmark finish, img count: {}",
@@ -84,7 +84,7 @@ pub async fn init_id_set(storage: &Arc<RwLock<ImgIdStorage>>, user_id: &str, coo
                     return;
                 }
 
-                if let Some(mut writeable) = storage.try_write().ok() {
+                if let Ok(mut writeable) = storage.try_write() {
                     for work in data_obj.body.works {
                         if work.restrict == 0 && work.x_restrict == 0 {
                             if let Some(work_id) = work.id.as_str() {

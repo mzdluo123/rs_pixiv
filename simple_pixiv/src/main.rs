@@ -46,7 +46,7 @@ async fn start_bookmark_task(storage:Arc<RwLock<ImgIdStorage>>){
             return;
         }
     };
-    actix_web::rt::spawn(refresh_random(storage.clone(), uid, cookie));
+    actix_web::rt::spawn(refresh_random(storage, uid, cookie));
 
 }
 

@@ -13,7 +13,7 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
     let mut cache = data.cache.lock().unwrap();
     match cache.cache_get(&id) {
         Some(c) =>{
-            return Some(c.clone());
+            Some(c.clone())
         },
         None => {
             drop(cache);
@@ -22,16 +22,16 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
             .append_header((USER_AGENT, "PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
             .append_header((REFERER, "https://www.pixiv.net"))
             .send().await;
-        match rsp {
-            Ok(mut i)=>{
+        return match rsp {
+            Ok(mut i) => {
                 let img_contant = i.body().await.ok()?;
                 cache = data.cache.lock().unwrap();
                 cache.cache_set(id, img_contant.clone());
-                return Some(img_contant)
+                Some(img_contant)
             }
-            Err(e) =>{
-                 error!("{:?} when download {}",&e,&id);
-                 return None
+            Err(e) => {
+                error!("{:?} when download {}",&e,&id);
+                None
             }
         };
         },

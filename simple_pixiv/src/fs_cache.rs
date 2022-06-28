@@ -55,11 +55,11 @@ pub enum FsCacheError {
 
 impl FsCache {
     pub fn new(cache_folder: &str) -> FsCache {
-        return FsCache {
+        FsCache {
             // metadata: RwLock::new(BinaryHeap::new()),
             // index:RwLock::new(HashMap::new()),
             cache_folder: cache_folder.to_string(),
-        };
+        }
     }
 
     // async fn read_meta(self:&Self, key:&str)->Option<Arc<FsCacheMetaData>>{
@@ -113,16 +113,16 @@ impl FsCache {
     //     })
     // }
 
-    pub async fn read(self: &Self, key: &str) -> Option<Bytes> {
+    pub async fn read(&self, key: &str) -> Option<Bytes> {
         let path = format!("{}/{}.jpg", self.cache_folder, key);
         let content = tokio::fs::read(&path).await;
-        match content {
+        return match content {
             Ok(v) => {
-                return Some(Bytes::from(v));
+                Some(Bytes::from(v))
             }
             Err(_e) => {
                 warn!("read cached file error {:?} : {}", path,_e);
-                return None;
+                None
             }
         }
 
@@ -134,11 +134,11 @@ impl FsCache {
         // }
     }
 
-    pub async fn read_stream(self:&Self ,req:&HttpRequest, key: &str)->Option<HttpResponse<BoxBody>>{
+    pub async fn read_stream(&self ,req:&HttpRequest, key: &str)->Option<HttpResponse<BoxBody>>{
         let path = format!("{}/{}.jpg", self.cache_folder, key);
         match NamedFile::open_async(path).await {
             Ok(_f) =>{
-                return Some(_f.into_response(req));
+                Some(_f.into_response(req))
             }
             Err(_) => {
                 None
@@ -147,7 +147,7 @@ impl FsCache {
     }
 
     pub async fn write_cache<T, E>(
-        self: &Self,
+        &self,
         key: &str,
         stream: &mut T,
     ) -> Result<(), FsCacheError>

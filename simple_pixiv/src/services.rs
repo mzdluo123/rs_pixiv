@@ -59,7 +59,7 @@ pub async fn web_img(
     //     return HttpResponse::NotFound().finish();
     // }
     let cache_key = format!("{}{}", info.0, info.1);
-    let ref fs_cache = data.fs_cache;
+    let fs_cache = &data.fs_cache;
     match fs_cache.read(&cache_key).await {
         Some(i) => {
             return HttpResponse::Ok()
@@ -95,7 +95,7 @@ pub async fn web_img(
                     let rsp = fs_cache.read_stream(&req, &cache_key).await;
                     match rsp {
                         Some(_i) => {
-                            return _i;
+                            _i
                         }
                         None => HttpResponse::NotFound().finish(),
                     }
@@ -117,7 +117,7 @@ pub async fn random(data: web::Data<AppState>) -> impl Responder {
         }
         return HttpResponse::NotFound().finish();
     }
-    return HttpResponse::NotFound().finish();
+    HttpResponse::NotFound().finish()
 }
 
 
@@ -140,20 +140,20 @@ pub async fn pximg_proxy(
         req_builder = req_builder.append_header((COOKIE,cookie));
     }
 
-    match req_builder.send().await {
-        Ok(i)=>{
-            let mut b =  HttpResponse::Ok();
+    return match req_builder.send().await {
+        Ok(i) => {
+            let mut b = HttpResponse::Ok();
             b.content_type(ContentType::jpeg());
-            if let Some(l) = i.headers().get(CONTENT_LENGTH){
+            if let Some(l) = i.headers().get(CONTENT_LENGTH) {
                 let size_s = SizedStream::new(l.to_str().unwrap().parse::<u64>().unwrap(), i);
                 return b.body(size_s);
             }
-            return b.streaming(i);
+            b.streaming(i)
         }
 
-        Err(e) =>{
+        Err(e) => {
             warn!("download error on {} {:?}",&url,&e);
-            return HttpResponse::NotFound().finish();
+            HttpResponse::NotFound().finish()
         }
     }
    
