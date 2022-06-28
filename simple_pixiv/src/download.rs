@@ -1,10 +1,10 @@
-use actix_web::{http::{header::{REFERER, ContentType, USER_AGENT,CACHE_CONTROL,LAST_MODIFIED}, Error}, HttpResponse, web::{Bytes, self}, HttpMessage, error::PayloadError, dev::Payload};
-use awc::{Client, ClientResponse};
+use actix_web::{http::{header::{REFERER, USER_AGENT}}, web::{Bytes, self}, error::PayloadError};
+use awc::{Client};
 use cached::Cached;
 
 use ::futures::Stream;
 use log::{error, info, warn};
-use tokio::sync::futures;
+
 use crate::AppState;
 
 

@@ -1,18 +1,23 @@
+
 use crate::download::{download_file, get_info};
 use crate::ill_struct::Root;
 use crate::tmplate::IndexTemp;
-use crate::{fs_cache, AppState};
+use crate::{AppState};
+use actix_web::body::SizedStream;
+
 use actix_web::http;
 use actix_web::http::header::CACHE_CONTROL;
+
 use actix_web::{
     get,
-    http::header::{ContentType, LAST_MODIFIED,USER_AGENT,COOKIE,REFERER},
-    web, App, HttpRequest, HttpResponse, Responder,
+    http::header::{ContentType, LAST_MODIFIED,USER_AGENT,COOKIE,REFERER,CONTENT_LENGTH},
+    web, HttpRequest, HttpResponse, Responder,
 };
 use askama::Template;
-use askama::filters::format;
+
 use cached::Cached;
-use log::{error, info, warn};
+
+use log::{error, warn};
 
 // static allowsType: [&str; 5] = ["mini","original","regular","small","thumb"];
 
@@ -115,7 +120,8 @@ pub async fn random(data: web::Data<AppState>) -> impl Responder {
     return HttpResponse::NotFound().finish();
 }
 
-#[get("/{path:(img-(master|original)|c).*}")]
+
+#[get("/{path:(img-(master|original)|c|user-profile).*}")]
 pub async fn pximg_proxy(
     parm: web::Path<String>,
     data: web::Data<AppState>,
@@ -136,13 +142,19 @@ pub async fn pximg_proxy(
 
     match req_builder.send().await {
         Ok(i)=>{
-            return HttpResponse::Ok().content_type(ContentType::jpeg()).streaming(i);
+            let mut b =  HttpResponse::Ok();
+            b.content_type(ContentType::jpeg());
+            if let Some(l) = i.headers().get(CONTENT_LENGTH){
+                let size_s = SizedStream::new(l.to_str().unwrap().parse::<u64>().unwrap(), i);
+                return b.body(size_s);
+            }
+            return b.streaming(i);
         }
+
         Err(e) =>{
             warn!("download error on {} {:?}",&url,&e);
             return HttpResponse::NotFound().finish();
         }
     }
    
-
 }

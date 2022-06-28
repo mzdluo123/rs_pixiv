@@ -1,9 +1,9 @@
 use actix_files::NamedFile;
-use actix_web::{web::Bytes, HttpResponse, body::BoxBody, HttpRequest, http::header::ContentType};
+use actix_web::{web::Bytes, HttpResponse, body::BoxBody, HttpRequest};
 
 use filetime::FileTime;
 
-use futures::{Stream, StreamExt, TryFutureExt};
+use futures::{Stream, StreamExt};
 use log::{error, info, warn};
 
 use std::{
@@ -120,8 +120,8 @@ impl FsCache {
             Ok(v) => {
                 return Some(Bytes::from(v));
             }
-            Err(e) => {
-                warn!("read cached file error {:?}", path);
+            Err(_e) => {
+                warn!("read cached file error {:?} : {}", path,_e);
                 return None;
             }
         }
@@ -174,8 +174,8 @@ impl FsCache {
                 Ok(c) => {
                     file.write_all(&c).await.unwrap();
                 }
-                Err(e) => {
-                    error!("write cache file error {}", e);
+                Err(_e) => {
+                    error!("write cache file error {}", _e);
                 }
             }
         }
@@ -187,7 +187,7 @@ impl FsCache {
 pub async fn clean(folder: &str) -> Result<(), FsCacheError> {
     let mut dir = tokio::fs::read_dir(folder)
         .await
-        .map_err(|e| FsCacheError::CleanError)?;
+        .map_err(|_e| FsCacheError::CleanError)?;
     let now = FileTime::from_system_time(SystemTime::now());
     while let Ok(Some(d)) = dir.next_entry().await {
         let meta = d.metadata().await;

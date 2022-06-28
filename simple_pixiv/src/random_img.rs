@@ -1,12 +1,10 @@
 use std::{
-    cell::RefCell,
     collections::HashSet,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
     time::Duration,
 };
 
 use actix_web::http::header::USER_AGENT;
-use askama::filters::format;
 
 use log::{error, info, debug};
 use rand::Rng;

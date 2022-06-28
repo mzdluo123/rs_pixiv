@@ -7,11 +7,11 @@ mod bookmark_struct;
 mod random_img;
 
 use fs_cache::FsCache;
-use log::{ info, error, warn};
+use log::{ info, warn};
 use actix_web::{ web::{self, Bytes}, App, HttpServer};
 use random_img::refresh_random;
 
-use std::{env, sync::{Mutex, Arc, RwLock},path::Path, cell::RefCell};
+use std::{env, sync::{Mutex, Arc, RwLock},path::Path};
 
 use crate::random_img::ImgIdStorage;
 
