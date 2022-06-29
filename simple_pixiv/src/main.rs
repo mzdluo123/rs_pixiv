@@ -13,6 +13,9 @@ use actix_web::{ web::{self, Bytes}, App, HttpServer};
 use random_img::refresh_random;
 
 use std::{env, sync::{Mutex, Arc, RwLock},path::Path};
+use std::time::Duration;
+use awc::Connector;
+use awc::http::header::{REFERER, USER_AGENT};
 
 use crate::random_img::ImgIdStorage;
 
@@ -83,11 +86,23 @@ async fn main() -> std::io::Result<()> {
 
     tokio::spawn(fs_cache::clean_task(file_cache_folder.clone()));
 
+    let client_builder = || {awc::ClientBuilder::new()
+        .add_default_header((REFERER, "https://www.pixiv.net"))
+        .add_default_header(("App-OS-Version","15.5"))
+        .add_default_header(("App-Version","7.14.8"))
+        .add_default_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"))
+        .connector(
+            Connector::new()
+                .conn_lifetime(Duration::from_secs(15))
+        )
+        .finish()
+    };
+
     HttpServer::new(move || {
         App::new()
         .app_data(web::Data::new(
             AppState{
-               client: awc::Client::default(),
+               client: client_builder(),
                cache: Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60)),
                 fs_cache :  FsCache::new(&file_cache_folder),
                 random_image:random_img.clone()

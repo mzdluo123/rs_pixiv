@@ -6,11 +6,11 @@ use crate::{AppState, retry};
 use actix_web::body::SizedStream;
 
 use actix_web::http;
-use actix_web::http::header::CACHE_CONTROL;
+
 
 use actix_web::{
     get,
-    http::header::{ContentType, LAST_MODIFIED,USER_AGENT,COOKIE,REFERER,CONTENT_LENGTH},
+    http::header::{ContentType,COOKIE,REFERER,CONTENT_LENGTH},
     web, HttpRequest, HttpResponse, Responder,
 };
 use askama::Template;
@@ -125,11 +125,7 @@ pub async fn pximg_proxy(
 
     let req_factory = ||{
         let client = &data.client;
-        let mut req_builder = client.get(&url)
-            .append_header((REFERER, "https://www.pixiv.net"))
-            .append_header(("App-OS-Version","15.5"))
-            .append_header(("App-Version","7.14.8"))
-            .append_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"));
+        let mut req_builder = client.get(&url);
 
         // if let Some(ua) =  req.headers().get(USER_AGENT){
         //     req_builder = req_builder.append_header((USER_AGENT,ua));

@@ -1,4 +1,4 @@
-use actix_web::{http::{header::{REFERER, USER_AGENT}}, web::{Bytes, self}, error::PayloadError};
+use actix_web::{http::{header::{ USER_AGENT}}, web::{Bytes, self}, error::PayloadError};
 use awc::{Client};
 use cached::Cached;
 
@@ -21,18 +21,14 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
             warn!("ram cache miss on {}",&id);
             let req_builder = ||{
                 data.client.get(format!("https://www.pixiv.net/ajax/illust/{}", &id))
-                    .append_header((REFERER, "https://www.pixiv.net"))
-                    .append_header(("App-OS-Version","15.5"))
-                    .append_header(("App-Version","7.14.8"))
-                    .append_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"))
             };
             let rsp = retry!(req_builder,3);
         return match rsp {
             Ok(mut i) => {
-                let img_contant = i.body().await.ok()?;
+                let img_content = i.body().await.ok()?;
                 cache = data.cache.lock().unwrap();
-                cache.cache_set(id, img_contant.clone());
-                Some(img_contant)
+                cache.cache_set(id, img_content.clone());
+                Some(img_content)
             }
             Err(e) => {
                 error!("{:?} when download {}",&e,&id);
@@ -50,10 +46,7 @@ pub async fn download_file(url:&str,client: &Client)->Option<impl Stream<Item = 
         info!("download from {}",url);
         let req_builder = ||{
             client.get(url)
-                .append_header((REFERER, "https://www.pixiv.net"))
-                .append_header(("App-OS-Version","15.5"))
-                .append_header(("App-Version","7.14.8"))
-                .append_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"))
+
         };
         match retry!(req_builder,3) {
             Ok(i)=>{
