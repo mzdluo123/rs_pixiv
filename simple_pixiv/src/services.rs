@@ -13,6 +13,7 @@ use actix_web::{
     http::header::{ContentType,COOKIE,CONTENT_LENGTH},
     web, HttpRequest, HttpResponse, Responder,
 };
+use actix_web::http::header::LAST_MODIFIED;
 use askama::Template;
 use cached::Cached;
 use log::{error, warn};
@@ -121,6 +122,10 @@ pub async fn pximg_proxy(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
+    if req.headers().contains_key("if-modified-since") {
+        return HttpResponse::NotModified().finish();
+    }
+
     let url = format!("https://i.pximg.net/{}",parm.as_ref());
 
     let req_factory = ||{
@@ -142,6 +147,9 @@ pub async fn pximg_proxy(
         Ok(i) => {
             let mut b = HttpResponse::Ok();
             b.content_type(ContentType::jpeg());
+            if let Some(last) = i.headers().get(LAST_MODIFIED){
+                b.append_header((LAST_MODIFIED,last));
+            }
             if let Some(l) = i.headers().get(CONTENT_LENGTH) {
                 let size_s = SizedStream::new(l.to_str().unwrap().parse::<u64>().unwrap(), i);
                 return b.body(size_s);

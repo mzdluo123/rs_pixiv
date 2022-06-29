@@ -83,7 +83,7 @@ pub async fn init_id_set(storage: &Arc<RwLock<ImgIdStorage>>, user_id: &str, coo
                     return;
                 }
                 if data_obj.body.works.is_empty() {
-                    if let Some(readable) = storage.try_read().ok() {
+                    if let Ok(readable) = storage.try_read() {
                         info!(
                             "download bookmark finish, img count: {}",
                             &readable.id_set.len()
@@ -111,6 +111,9 @@ pub async fn init_id_set(storage: &Arc<RwLock<ImgIdStorage>>, user_id: &str, coo
                 }
 
                 page += 1;
+                if let Ok(mut _i) = storage.try_write(){
+                    _i.refresh_list()
+                }
             }
             Err(_e) => {
                 error!("download bookmark error {}", _e);
@@ -126,9 +129,7 @@ pub async fn refresh_random(storage: Arc<RwLock<ImgIdStorage>>, user_id: String,
         info!("start download bookmark");
 
         init_id_set(&storage, &user_id, &cookie).await;
-        if let Ok(mut _i) = storage.try_write(){
-            _i.refresh_list()
-        }
+
         tokio::time::sleep(Duration::from_secs(60 * 60)).await;
     }
 }
