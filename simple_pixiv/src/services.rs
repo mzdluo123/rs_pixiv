@@ -10,7 +10,7 @@ use actix_web::http;
 
 use actix_web::{
     get,
-    http::header::{ContentType,COOKIE,REFERER,CONTENT_LENGTH},
+    http::header::{ContentType,COOKIE,CONTENT_LENGTH},
     web, HttpRequest, HttpResponse, Responder,
 };
 use askama::Template;

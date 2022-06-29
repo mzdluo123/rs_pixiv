@@ -13,24 +13,32 @@ use crate::bookmark_struct::{self};
 
 pub struct ImgIdStorage {
     pub id_set: HashSet<String>,
+    pub id_list: Vec<String>
 }
 
 impl ImgIdStorage {
     pub fn new() -> ImgIdStorage {
         ImgIdStorage {
             id_set: HashSet::new(),
+            id_list: Vec::new()
         }
     }
 
-    pub fn random_img(&self) -> Option<String> {
+    pub fn refresh_list(&mut self){
         let readable = &self.id_set;
         if readable.is_empty() {
+            return;
+        }
+        let id_list: Vec<String> = readable.clone().into_iter().collect();
+        self.id_list = id_list;
+    }
+    pub fn random_img(&self) -> Option<String> {
+        if self.id_list.is_empty() {
             return None;
         }
         let mut rand = rand::thread_rng();
-        let id_list: Vec<String> = readable.clone().into_iter().collect();
-        let index = rand.gen_range(0..id_list.len() - 1);
-        return id_list.get(index).cloned();
+        let index = rand.gen_range(0.. self.id_list.len()- 1);
+        return self.id_list.get(index).cloned();
     }
 }
 
@@ -75,7 +83,7 @@ pub async fn init_id_set(storage: &Arc<RwLock<ImgIdStorage>>, user_id: &str, coo
                     return;
                 }
                 if data_obj.body.works.is_empty() {
-                    if let Some(readable) = &storage.read().ok() {
+                    if let Some(readable) = storage.try_read().ok() {
                         info!(
                             "download bookmark finish, img count: {}",
                             &readable.id_set.len()
@@ -118,7 +126,9 @@ pub async fn refresh_random(storage: Arc<RwLock<ImgIdStorage>>, user_id: String,
         info!("start download bookmark");
 
         init_id_set(&storage, &user_id, &cookie).await;
-
+        if let Ok(mut _i) = storage.try_write(){
+            _i.refresh_list()
+        }
         tokio::time::sleep(Duration::from_secs(60 * 60)).await;
     }
 }

@@ -1,4 +1,4 @@
-use actix_web::{http::{header::{ USER_AGENT}}, web::{Bytes, self}, error::PayloadError};
+use actix_web::{ web::{Bytes, self}, error::PayloadError};
 use awc::{Client};
 use cached::Cached;
 
