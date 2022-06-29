@@ -119,6 +119,6 @@ pub async fn refresh_random(storage: Arc<RwLock<ImgIdStorage>>, user_id: String,
 
         init_id_set(&storage, &user_id, &cookie).await;
 
-        tokio::time::sleep(Duration::from_millis(60 * 60)).await;
+        tokio::time::sleep(Duration::from_secs(60 * 60)).await;
     }
 }
