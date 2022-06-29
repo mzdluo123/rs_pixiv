@@ -20,7 +20,7 @@ macro_rules! retry {
                                      if count < $count {
                                     warn!("error {:?} ,retry...",h2_error);
                                     count += 1;
-                                    tokio::time::sleep(Duration::from_millis(200)).await;
+                                    tokio::time::sleep(Duration::from_millis(500)).await;
                                     }else {
                                         break Err(_e);
                                     }

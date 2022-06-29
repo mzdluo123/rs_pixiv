@@ -21,8 +21,10 @@ pub async fn get_info(id:i32,data: &web::Data<AppState>)->Option<Bytes>{
             warn!("ram cache miss on {}",&id);
             let req_builder = ||{
                 data.client.get(format!("https://www.pixiv.net/ajax/illust/{}", &id))
-                    .append_header((USER_AGENT, "PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
                     .append_header((REFERER, "https://www.pixiv.net"))
+                    .append_header(("App-OS-Version","15.5"))
+                    .append_header(("App-Version","7.14.8"))
+                    .append_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"))
             };
             let rsp = retry!(req_builder,3);
         return match rsp {
@@ -49,7 +51,9 @@ pub async fn download_file(url:&str,client: &Client)->Option<impl Stream<Item = 
         let req_builder = ||{
             client.get(url)
                 .append_header((REFERER, "https://www.pixiv.net"))
-                .append_header((USER_AGENT,"PixivAndroidApp/5.0.115 (Android 6.0; PixivBot)"))
+                .append_header(("App-OS-Version","15.5"))
+                .append_header(("App-Version","7.14.8"))
+                .append_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"))
         };
         match retry!(req_builder,3) {
             Ok(i)=>{

@@ -58,13 +58,9 @@ pub async fn web_img(
     // }
     let cache_key = format!("{}{}", info.0, info.1);
     let fs_cache = &data.fs_cache;
-    match fs_cache.read(&cache_key).await {
+    match fs_cache.read_stream(&req,&cache_key).await {
         Some(i) => {
-            return HttpResponse::Ok()
-                .content_type(ContentType::jpeg())
-                .append_header((CACHE_CONTROL, "max-age=31536000"))
-                .append_header((LAST_MODIFIED, "1"))
-                .body(i);
+            return i;
         }
         None => {
             warn!("disk cache miss on {}", cache_key)
@@ -130,11 +126,14 @@ pub async fn pximg_proxy(
     let req_factory = ||{
         let client = &data.client;
         let mut req_builder = client.get(&url)
-            .append_header((REFERER, "https://www.pixiv.net"));
+            .append_header((REFERER, "https://www.pixiv.net"))
+            .append_header(("App-OS-Version","15.5"))
+            .append_header(("App-Version","7.14.8"))
+            .append_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"));
 
-        if let Some(ua) =  req.headers().get(USER_AGENT){
-            req_builder = req_builder.append_header((USER_AGENT,ua));
-        }
+        // if let Some(ua) =  req.headers().get(USER_AGENT){
+        //     req_builder = req_builder.append_header((USER_AGENT,ua));
+        // }
 
         if let Some(cookie) =  req.headers().get(COOKIE){
             req_builder = req_builder.append_header((COOKIE,cookie));
