@@ -93,7 +93,8 @@ async fn main() -> std::io::Result<()> {
         .add_default_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"))
         .connector(
             Connector::new()
-                .conn_lifetime(Duration::from_secs(15))
+                .conn_lifetime(Duration::from_secs(10))
+                .initial_window_size(1024*1024)
         )
         .finish()
     };
@@ -103,7 +104,7 @@ async fn main() -> std::io::Result<()> {
         .app_data(web::Data::new(
             AppState{
                client: client_builder(),
-               cache: Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60)),
+               cache: Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60*2)),
                 fs_cache :  FsCache::new(&file_cache_folder),
                 random_image:random_img.clone()
             }
@@ -121,12 +122,9 @@ async fn main() -> std::io::Result<()> {
     })
         .bind(("0.0.0.0", port))?
         // .bind(("::",port))?
-        
         .run()
         .await
 }
-
-
 
 
 
