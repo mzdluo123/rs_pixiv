@@ -8,11 +8,12 @@ mod random_img;
 mod retry;
 
 use fs_cache::FsCache;
-use log::{ info, warn};
+use log::{error, info, warn};
 use actix_web::{ web::{self, Bytes}, App, HttpServer};
 use random_img::refresh_random;
 
 use std::{env, sync::{Mutex, Arc, RwLock},path::Path};
+use std::sync::TryLockResult;
 use std::time::Duration;
 use awc::Connector;
 use awc::http::header::{REFERER, USER_AGENT};
@@ -22,7 +23,7 @@ use crate::random_img::ImgIdStorage;
 
 pub struct AppState {
     client:awc::Client,
-    cache: Mutex<cached::TimedSizedCache<i32,Bytes>>,
+    cache: Arc<Mutex<cached::TimedSizedCache<i32,Bytes>>>,
     fs_cache: FsCache,
     random_image:Arc<RwLock<ImgIdStorage>>
 }
@@ -83,8 +84,8 @@ async fn main() -> std::io::Result<()> {
     let random_img = Arc::new(RwLock::new(ImgIdStorage::new()));
 
     start_bookmark_task(random_img.clone()).await;
-
     tokio::spawn(fs_cache::clean_task(file_cache_folder.clone()));
+
 
     let client_builder = || {awc::ClientBuilder::new()
         .add_default_header((REFERER, "https://www.pixiv.net"))
@@ -99,12 +100,33 @@ async fn main() -> std::io::Result<()> {
         .finish()
     };
 
+    let cache = Arc::new(Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60*2)));
+    let cache_refresh_task =   |c:Arc<Mutex<cached::TimedSizedCache<i32,Bytes>>>| async move {
+        loop {
+            info!("refresh cache");
+            match c.clone().try_lock() {
+
+                Ok(_c) =>{
+                    _c.refresh();
+                }
+                Err(_) => {
+                    error!("refresh cache error");
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(60 * 60)).await;
+        }
+    };
+
+    actix_web::rt::spawn(
+      cache_refresh_task(cache.clone())
+    );
+
     HttpServer::new(move || {
         App::new()
         .app_data(web::Data::new(
             AppState{
                client: client_builder(),
-               cache: Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60*2)),
+                cache: cache.clone(),
                 fs_cache :  FsCache::new(&file_cache_folder),
                 random_image:random_img.clone()
             }

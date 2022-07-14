@@ -1,4 +1,4 @@
-
+use std::sync::TryLockResult;
 use crate::download::{download_file, get_info};
 use crate::ill_struct::Root;
 use crate::tmplate::IndexTemp;
@@ -22,18 +22,24 @@ use log::{error, warn};
 
 #[get("/")]
 pub async fn index(data: web::Data<AppState>) -> impl Responder {
-    let cache = data.cache.lock().unwrap();
+    return match data.cache.try_lock() {
+        Ok(_c) => {
+            let rsp = IndexTemp {
+                meta_cache: _c.cache_size(),
+                bookmark: data.random_image.read().unwrap().id_set.len(),
+            };
+            match rsp.render() {
+                Ok(rsp) => HttpResponse::Ok()
+                    .content_type(ContentType::html())
+                    .body(rsp),
+                Err(_) => HttpResponse::InternalServerError().finish(),
+            }
+        }
+        _ => {
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 
-    let rsp = IndexTemp {
-        meta_cache: cache.cache_size(),
-        bookmark: data.random_image.read().unwrap().id_set.len(),
-    };
-    return match rsp.render() {
-        Ok(rsp) => HttpResponse::Ok()
-            .content_type(ContentType::html())
-            .body(rsp),
-        Err(_) => HttpResponse::InternalServerError().finish(),
-    };
 }
 
 #[get("/json/{id}")]
