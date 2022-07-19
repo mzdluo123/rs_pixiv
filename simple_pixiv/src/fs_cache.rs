@@ -4,7 +4,7 @@ use actix_web::{web::Bytes, HttpResponse, body::BoxBody, HttpRequest};
 use filetime::FileTime;
 
 use futures::{Stream, StreamExt};
-use log::{error, info, warn};
+use log::{error, info};
 
 use std::{
 
@@ -113,18 +113,18 @@ impl FsCache {
     //     })
     // }
 
-    pub async fn read(&self, key: &str) -> Option<Bytes> {
-        let path = format!("{}/{}.jpg", self.cache_folder, key);
-        let content = tokio::fs::read(&path).await;
-        return match content {
-            Ok(v) => {
-                Some(Bytes::from(v))
-            }
-            Err(_e) => {
-                warn!("read cached file error {:?} : {}", path,_e);
-                None
-            }
-        }
+    // pub async fn read(&self, key: &str) -> Option<Bytes> {
+    //     let path = format!("{}/{}.jpg", self.cache_folder, key);
+    //     let content = tokio::fs::read(&path).await;
+    //     return match content {
+    //         Ok(v) => {
+    //             Some(Bytes::from(v))
+    //         }
+    //         Err(_e) => {
+    //             warn!("read cached file error {:?} : {}", path,_e);
+    //             None
+    //         }
+    //     }
 
         // match self.read_meta(key).await {
         //     Some(i)=>{
@@ -132,7 +132,7 @@ impl FsCache {
         //     }
         //     None=>None
         // }
-    }
+    // }
 
     pub async fn read_stream(&self ,req:&HttpRequest, key: &str)->Option<HttpResponse<BoxBody>>{
         let path = format!("{}/{}.jpg", self.cache_folder, key);
@@ -172,7 +172,10 @@ impl FsCache {
         while let Some(v) = stream.next().await {
             match v {
                 Ok(c) => {
-                    file.write_all(&c).await.unwrap();
+                    if let Err(_e) = file.write_all(&c).await{
+                        error!("write cache file error {}", _e);
+                        return Err( FsCacheError::WriteFileError);
+                    }
                 }
                 Err(_e) => {
                     error!("write cache file error {}", _e);

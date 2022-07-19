@@ -13,7 +13,6 @@ use actix_web::{ web::{self, Bytes}, App, HttpServer};
 use random_img::refresh_random;
 
 use std::{env, sync::{Mutex, Arc, RwLock},path::Path};
-use std::sync::TryLockResult;
 use std::time::Duration;
 use awc::Connector;
 use awc::http::header::{REFERER, USER_AGENT};

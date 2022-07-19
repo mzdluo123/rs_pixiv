@@ -1,4 +1,4 @@
-use std::sync::TryLockResult;
+
 use crate::download::{download_file, get_info};
 use crate::ill_struct::Root;
 use crate::tmplate::IndexTemp;
@@ -91,7 +91,9 @@ pub async fn web_img(
             };
             match download_file(&url, &data.client).await {
                 Some(mut i) => {
-                    fs_cache.write_cache(&cache_key, &mut i).await.unwrap();
+                    if (fs_cache.write_cache(&cache_key, &mut i).await).is_err(){
+                        return HttpResponse::InternalServerError().finish();
+                    }
 
                     let rsp = fs_cache.read_stream(&req, &cache_key).await;
                     match rsp {
