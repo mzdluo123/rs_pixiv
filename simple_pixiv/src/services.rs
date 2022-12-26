@@ -63,16 +63,6 @@ pub async fn web_img(
     // if !allowsType.contains(&img_type.as_str()){
     //     return HttpResponse::NotFound().finish();
     // }
-    let cache_key = format!("{}{}", info.0, info.1);
-    let fs_cache = &data.fs_cache;
-    match fs_cache.read_stream(&req,&cache_key).await {
-        Some(i) => {
-            return i;
-        }
-        None => {
-            warn!("disk cache miss on {}", cache_key)
-        }
-    }
 
     let content = get_info(info.1, &data).await;
     match content {
@@ -90,19 +80,7 @@ pub async fn web_img(
                 }
             };
             match download_file(&url, &data.client).await {
-                Some(mut i) => {
-                    if (fs_cache.write_cache(&cache_key, &mut i).await).is_err(){
-                        return HttpResponse::InternalServerError().finish();
-                    }
-
-                    let rsp = fs_cache.read_stream(&req, &cache_key).await;
-                    match rsp {
-                        Some(_i) => {
-                            _i
-                        }
-                        None => HttpResponse::NotFound().finish(),
-                    }
-                }
+                Some(i) => HttpResponse::Ok().streaming(i),
                 None => HttpResponse::NotFound().finish(),
             }
         }

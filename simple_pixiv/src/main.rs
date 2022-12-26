@@ -2,12 +2,10 @@ mod tmplate;
 mod services;
 mod download;
 mod ill_struct;
-mod fs_cache;
 mod bookmark_struct;
 mod random_img;
 mod retry;
 
-use fs_cache::FsCache;
 use log::{error, info, warn};
 use actix_web::{ web::{self, Bytes}, App, HttpServer};
 use random_img::refresh_random;
@@ -23,7 +21,6 @@ use crate::random_img::ImgIdStorage;
 pub struct AppState {
     client:awc::Client,
     cache: Arc<Mutex<cached::TimedSizedCache<i32,Bytes>>>,
-    fs_cache: FsCache,
     random_image:Arc<RwLock<ImgIdStorage>>
 }
 
@@ -65,26 +62,12 @@ async fn main() -> std::io::Result<()> {
             8080
         }
     };
-    let file_cache_folder = match env::var("CACHE") {
-        Ok(c) =>{
-            c
-        }
-        Err(_)=>{
-            "./cache".to_string()
-        }
-    };
 
     info!("Run server on port {}",port);
-    
 
-    if !Path::new(&file_cache_folder).exists() {
-        tokio::fs::create_dir_all(&file_cache_folder).await.unwrap();
-    }
     let random_img = Arc::new(RwLock::new(ImgIdStorage::new()));
 
     start_bookmark_task(random_img.clone()).await;
-    tokio::spawn(fs_cache::clean_task(file_cache_folder.clone()));
-
 
     let client_builder = || {awc::ClientBuilder::new()
         .add_default_header((REFERER, "https://www.pixiv.net"))
@@ -93,8 +76,8 @@ async fn main() -> std::io::Result<()> {
         .add_default_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"))
         .connector(
             Connector::new()
-                .conn_lifetime(Duration::from_secs(10))
-                .initial_window_size(1024*1024)
+                .conn_lifetime(Duration::from_secs(60))
+                .initial_window_size(2048)
         )
         .finish()
     };
@@ -126,7 +109,6 @@ async fn main() -> std::io::Result<()> {
             AppState{
                client: client_builder(),
                 cache: cache.clone(),
-                fs_cache :  FsCache::new(&file_cache_folder),
                 random_image:random_img.clone()
             }
         ))
@@ -147,23 +129,3 @@ async fn main() -> std::io::Result<()> {
         .await
 }
 
-
-
-// async fn evict_task(file_cache: Arc<forceps::Cache>){
-//     let max_cache_size: usize = match env::var("MAX_CACHE_SIZE") {
-//         Ok(p) => {
-//             p.parse().unwrap()
-//         }
-//         Err(_) => {
-//             100*1024*1024 // 100MB
-//         }
-//     };
-
-//     loop {
-//         file_cache.evict_with(LruEvictor::new(max_cache_size.try_into().unwrap())).await.map_err(|e|{
-//             error!("evict cache error {:?}",e);
-//         }).ok();
-//         info!("evict cache success");
-//         tokio::time::sleep(time::Duration::from_secs(60*60)).await;
-//     }
-// }
