@@ -77,7 +77,6 @@ async fn main() -> std::io::Result<()> {
         .connector(
             Connector::new()
                 .conn_lifetime(Duration::from_secs(60))
-                .initial_window_size(2048)
         )
         .finish()
     };
