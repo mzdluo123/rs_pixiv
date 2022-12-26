@@ -76,7 +76,7 @@ async fn main() -> std::io::Result<()> {
         .add_default_header((USER_AGENT,"PixivIOSApp/7.14.8 (iOS 15.5; iPhone14,5)"))
         .connector(
             Connector::new()
-                .conn_lifetime(Duration::from_secs(30))
+                .conn_lifetime(Duration::from_secs(10))
         )
         .finish()
     };
