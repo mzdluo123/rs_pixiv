@@ -22,7 +22,7 @@ pub async fn get_info(id: i32, data: &web::Data<AppState>) -> Option<Bytes> {
             drop(cache);
             warn!("ram cache miss on {}",&id);
             let req_builder = || {
-                data.client.get(format!("https://www.pixiv.net/ajax/illust/{}", &id))
+                data.client.get(format!("https://www.pixiv.net/ajax/illust/{}/pages", &id))
             };
             let rsp = retry!(req_builder,3);
             return match rsp {

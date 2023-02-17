@@ -5,12 +5,13 @@ mod ill_struct;
 mod bookmark_struct;
 mod random_img;
 mod retry;
+mod utils;
 
-use log::{error, info, warn};
+use log::{ info, warn};
 use actix_web::{ web::{self, Bytes}, App, HttpServer};
 use random_img::refresh_random;
 
-use std::{env, sync::{Mutex, Arc, RwLock},path::Path};
+use std::{env, sync::{Mutex, Arc, RwLock}};
 use std::time::Duration;
 use awc::Connector;
 use awc::http::header::{REFERER, USER_AGENT};
@@ -81,26 +82,25 @@ async fn main() -> std::io::Result<()> {
         .finish()
     };
 
-    let cache = Arc::new(Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(5000, 60*60*2)));
-    let cache_refresh_task =   |c:Arc<Mutex<cached::TimedSizedCache<i32,Bytes>>>| async move {
-        loop {
-            info!("refresh cache");
-            match c.clone().try_lock() {
+    let cache = Arc::new(Mutex::new(cached::TimedSizedCache::with_size_and_lifespan(1000, 60*60*2)));
+    // let cache_refresh_task =   |c:Arc<Mutex<cached::TimedSizedCache<i32,Bytes>>>| async move {
+    //     loop {
+    //         info!("flush cache");
+    //         match c.clone().try_lock() {
+    //             Ok(mut _c) =>{
+    //                 _c.flush();
+    //             }
+    //             Err(_) => {
+    //                 error!("refresh cache error");
+    //             }
+    //         }
+    //         tokio::time::sleep(Duration::from_secs(60 * 60)).await;
+    //     }
+    // };
 
-                Ok(_c) =>{
-                    _c.refresh();
-                }
-                Err(_) => {
-                    error!("refresh cache error");
-                }
-            }
-            tokio::time::sleep(Duration::from_secs(60 * 60)).await;
-        }
-    };
-
-    actix_web::rt::spawn(
-      cache_refresh_task(cache.clone())
-    );
+    // actix_web::rt::spawn(
+    //   cache_refresh_task(cache.clone())
+    // );
 
     HttpServer::new(move || {
         App::new()
@@ -115,8 +115,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(actix_web::middleware::ErrorHandlers::default())
 
             .service(services::index)
-            .service(services::json_img)
+            .service(services::json_pages)
+            .service(services::fast_small_img)
             .service(services::web_img)
+            .service(services::web_img_with_page)
             .service(services::random)
             .service(services::pximg_proxy)
             
