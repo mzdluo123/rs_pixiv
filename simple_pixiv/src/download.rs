@@ -1,8 +1,9 @@
-use actix_web::{web::{Bytes, self}, error::PayloadError};
+use actix_web::{web::{Bytes, self}, error::PayloadError, HttpResponse};
 use awc::{Client};
 use cached::Cached;
 
 use ::futures::Stream;
+use actix_web::http::header::LAST_MODIFIED;
 
 use log::{error, info, warn};
 
@@ -49,18 +50,22 @@ pub async fn get_info(id: i32, data: &web::Data<AppState>) -> Option<Bytes> {
 }
 
 
-pub async fn download_file(url: &str, client: &Client) -> Option<impl Stream<Item=Result<actix_web::web::Bytes, PayloadError>>> {
+pub async fn download_file(url: &str, client: &Client) -> HttpResponse {
     info!("download from {}",url);
     let req_builder = || {
         client.get(url)
     };
     match retry!(req_builder,3) {
         Ok(i) => {
-            Some(i)
+            let mut rsp = HttpResponse::Ok();
+            if let Some(last) = i.headers().get(LAST_MODIFIED) {
+                rsp.append_header((LAST_MODIFIED, last));
+            }
+            rsp.streaming(i)
         }
         Err(e) => {
             warn!("download error on {} {:?}",url,&e);
-            None
+            HttpResponse::NotFound().finish()
         }
     }
 }

@@ -111,10 +111,7 @@ async fn find_image(img_id:i32, page:usize, img_type:&str, data: web::Data<AppSt
                     return HttpResponse::NotFound().finish();
                 }
             };
-            match download_file(url, &data.client).await {
-                Some(i) => HttpResponse::Ok().streaming(i),
-                None => HttpResponse::NotFound().finish(),
-            }
+             download_file(url, &data.client).await
         }
         None => HttpResponse::NotFound().finish(),
     }
