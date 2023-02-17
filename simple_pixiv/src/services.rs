@@ -15,7 +15,7 @@ use crate::{AppState, retry};
 use crate::download::{download_file, get_info};
 use crate::ill_struct::{ PageStruct};
 use crate::tmplate::IndexTemp;
-use crate::utils::make_redirect;
+use crate::utils::{make_permanent_redirect, make_temporary_redirect};
 
 // static allowsType: [&str; 5] = ["mini","original","regular","small","thumb"];
 
@@ -51,7 +51,7 @@ pub async fn json_pages(id: web::Path<i32>, data: web::Data<AppState>) -> impl R
 
 #[get("/img/{id}")]
 pub async fn fast_small_img(info: web::Path<String>) -> HttpResponse {
-    return HttpResponse::TemporaryRedirect().append_header((http::header::LOCATION, format!("/img/small/{}",info))).finish();
+    return make_permanent_redirect(format!("/img/small/{}",info));
 }
 
 #[get("/img/{img_type}/{id}")]
@@ -59,7 +59,7 @@ pub async fn web_img(
     info: web::Path<(String, i32)>,
 ) -> impl Responder {
     let (img_type, id) = info.into_inner();
-    return make_redirect(format!("/img/{img_type}/{id}/1"));
+    return make_permanent_redirect(format!("/img/{img_type}/{id}/1"));
 }
 
 
@@ -125,7 +125,7 @@ async fn find_image(img_id:i32, page:usize, img_type:&str, data: web::Data<AppSt
 pub async fn random(data: web::Data<AppState>) -> impl Responder {
     if let Ok(random) = data.random_image.read() {
         if let Some(id) = random.random_img() {
-            return make_redirect(format!("/img/small/{id}"));
+            return make_temporary_redirect(format!("/img/small/{id}"));
         }
         return HttpResponse::NotFound().finish();
     }
