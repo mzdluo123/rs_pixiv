@@ -6,7 +6,7 @@ use actix_web::{
 };
 use actix_web::body::SizedStream;
 use actix_web::http;
-use actix_web::http::header::LAST_MODIFIED;
+use actix_web::http::header::{CONTENT_TYPE, LAST_MODIFIED};
 use askama::Template;
 use cached::Cached;
 use log::{error, warn};
@@ -159,9 +159,12 @@ pub async fn pximg_proxy(
     let res = retry!(req_factory,3);
     return match res {
         Ok(i) => {
-            let t = i.content_type();
             let mut b = HttpResponse::Ok();
-            b.content_type(t);
+            if let Some(last) = i.headers().get(CONTENT_TYPE) {
+                b.content_type(last);
+            } else {
+                b.content_type(ContentType::octet_stream());
+            };
             if let Some(last) = i.headers().get(LAST_MODIFIED) {
                 b.append_header((LAST_MODIFIED, last));
             }
