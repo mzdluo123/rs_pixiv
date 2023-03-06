@@ -130,7 +130,7 @@ pub async fn random(data: web::Data<AppState>) -> impl Responder {
 }
 
 
-#[get("/{path:(img-(master|original)|c|user-profile).*}")]
+#[get("/{path:(img-(master|original|zip)|c|user-profile).*}")]
 pub async fn pximg_proxy(
     parm: web::Path<String>,
     data: web::Data<AppState>,
