@@ -159,8 +159,9 @@ pub async fn pximg_proxy(
     let res = retry!(req_factory,3);
     return match res {
         Ok(i) => {
+            let t = i.content_type();
             let mut b = HttpResponse::Ok();
-            b.content_type(ContentType::jpeg());
+            b.content_type(t);
             if let Some(last) = i.headers().get(LAST_MODIFIED) {
                 b.append_header((LAST_MODIFIED, last));
             }
