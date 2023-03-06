@@ -160,8 +160,8 @@ pub async fn pximg_proxy(
     return match res {
         Ok(i) => {
             let mut b = HttpResponse::Ok();
-            if let Some(last) = i.headers().get(CONTENT_TYPE) {
-                b.content_type(last);
+            if let Some(content) = i.headers().get(CONTENT_TYPE) {
+                b.content_type(content);
             } else {
                 b.content_type(ContentType::octet_stream());
             };
