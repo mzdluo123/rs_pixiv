@@ -6,7 +6,7 @@ use actix_web::{
 };
 use actix_web::body::SizedStream;
 use actix_web::http;
-use actix_web::http::header::LAST_MODIFIED;
+use actix_web::http::header::{CONTENT_TYPE, LAST_MODIFIED};
 use askama::Template;
 use cached::Cached;
 use log::{error, warn};
@@ -130,7 +130,7 @@ pub async fn random(data: web::Data<AppState>) -> impl Responder {
 }
 
 
-#[get("/{path:(img-(master|original)|c|user-profile).*}")]
+#[get("/{path:(img-(master|original|zip)|c|user-profile).*}")]
 pub async fn pximg_proxy(
     parm: web::Path<String>,
     data: web::Data<AppState>,
@@ -160,7 +160,11 @@ pub async fn pximg_proxy(
     return match res {
         Ok(i) => {
             let mut b = HttpResponse::Ok();
-            b.content_type(ContentType::jpeg());
+            if let Some(content) = i.headers().get(CONTENT_TYPE) {
+                b.content_type(content);
+            } else {
+                b.content_type(ContentType::octet_stream());
+            };
             if let Some(last) = i.headers().get(LAST_MODIFIED) {
                 b.append_header((LAST_MODIFIED, last));
             }
